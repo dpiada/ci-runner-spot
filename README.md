@@ -1,4 +1,4 @@
-# CI RUNNER SPOT INSTANCE
+# CI RUNNER SPOT INSTANCE - FOR GITLAB_CI
 
 This repo allow you to create AWS gitlab runner in with spot instaces for execute pipeline job
 The mainly reason to use this it's cost reduction.
