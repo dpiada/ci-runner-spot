@@ -15,7 +15,3 @@ variable "environment"{
   description = "The description of gilab runner environment"
   default     = "gitlab-runner-spot"
 }
-
-variable "registration_token" {
-  default = "registration_token"
-}

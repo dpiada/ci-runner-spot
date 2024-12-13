@@ -48,10 +48,62 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-data "aws_security_group" "default" {
-  name   = "default"
+resource "aws_security_group" "sg-runner-git" {
+  name   = "runner-gitlab"
   vpc_id = aws_default_vpc.default.id
+
+  ingress = [
+    {
+      description      = "HTTP"
+      from_port        = 80
+      to_port          = 80
+      protocol         = "tcp"
+      cidr_blocks      = ["0.0.0.0/0"]  
+      ipv6_cidr_blocks = []
+      prefix_list_ids = []
+      security_groups = []
+      self = false
+    },
+    {
+        description      = "HTTPS"
+        from_port        = 443
+        to_port          = 443
+        protocol         = "tcp"
+        cidr_blocks      = ["0.0.0.0/0"]  
+        ipv6_cidr_blocks = []
+        prefix_list_ids = []
+        security_groups = []
+        self = false      
+    },
+    {
+      description      = "SSH"
+      from_port        = 22
+      to_port          = 22
+      protocol         = "tcp"
+      cidr_blocks      = ["0.0.0.0/0"]  
+      ipv6_cidr_blocks = []
+      prefix_list_ids = []
+      security_groups = []
+      self = false      
+    }
+  ]
+
+
+  egress = [
+    {
+      description      = "for all outgoing traffics"
+      from_port        = 0
+      to_port          = 0
+      protocol         = "-1"
+      cidr_blocks      = ["0.0.0.0/0"]
+      ipv6_cidr_blocks = ["::/0"]
+      prefix_list_ids = []
+      security_groups = []
+      self = false
+    }
+  ]
 }
+
 
 #####################################################################
 #                       Runner Configurations                       #
@@ -59,7 +111,7 @@ data "aws_security_group" "default" {
 
 module "runner" {
   source  = "cattle-ops/gitlab-runner/aws"
-  version = "7.5.0"
+  version = "8.1.0"
 
   environment = "gitlab-runner-spot-fleet"
 
@@ -75,23 +127,24 @@ module "runner" {
     type = "t3a.nano"
   }
 
+  runner_networking = {
+    allow_incoming_ping                    = true
+    security_group_ids                     = [resource.aws_security_group.sg-runner-git.id]
+  }
+
   runner_gitlab = {
     url = "https://gitlab.com"
-    registration_token = var.registration_token
-    preregistered_runner_token_ssm_parameter_name = "runner-token"
+
+    preregistered_runner_token_ssm_parameter_name = "precreated-token"
   }
 
   runner_schedule_enable = true
   runner_schedule_config = {
-    # Configure optional scale_out scheduled action
-    scale_out_recurrence = "0 6 * * 1-5" #UTC
-    scale_out_count      = 1 # Default for min_size, desired_capacity and max_size
-    # Override using: scale_out_min_size, scale_out_desired_capacity, scale_out_max_size
+    scale_out_recurrence = "0 6 * * 1-5"
+    scale_out_count      = 1 
 
-    # Configure optional scale_in scheduled action
-    scale_in_recurrence  = "0 18 * * 1-5" #UTC
-    scale_in_count       = 0 # Default for min_size, desired_capacity and max_size
-    # Override using: scale_out_min_size, scale_out_desired_capacity, scale_out_max_size
+    scale_in_recurrence  = "0 18 * * 1-5" 
+    scale_in_count       = 0 
   }
   
   ###### RUNNER WORKER #########
